@@ -1,0 +1,18 @@
+﻿{
+	"version": "0.1.0",
+	"command": "mads.exe",
+	"showOutput": "silent",
+	"suppressTaskName": true,
+	"isBuildCommand": true,
+	"taskName": "compile",
+	"args": ["multiloops.asm", "-o:multiloops.xex", "-t", "-l"],
+	"problemMatcher": {
+		"fileLocation": ["relative", "${workspaceRoot}"],
+		"pattern": {
+			"regexp": "^(.*) [(]([0-9]*)[)] ERROR: (.*)$",
+			"file": 1,
+			"line": 2,
+			"message": 3			
+		}
+	}
+}
