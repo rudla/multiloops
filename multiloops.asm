@@ -7,7 +7,7 @@ _SYS_PRINT_SIGNED = 0
 SCR_WIDTH   =  40
 SCR_HEIGHT  =  25
 
-STATUS_LINE = 24
+STATUS_LINE = 26
 
 CURSOR_COUNT = 4
 CURSOR_HEIGHT = 8+4
@@ -46,7 +46,7 @@ joy_cfg = cursor_no+1		;0 = normal joysticks, 1 = multijoy
 
 TICKS_PER_SECOND = 50
 
-clock = cursor_no + 1
+clock = joy_cfg + 1
 seconds = clock+1
 minutes = seconds+1
 hours = minutes+1
@@ -67,7 +67,7 @@ f_left = 8
 		mva #0 DMACTL
 		init_nmi $14, nmi , $c0 
 
-		mwa #DL_BUF DLPTR
+		mwa #DLIST DLPTR
 		mva #%00111110 DMACTL
 
 		ldx #3
@@ -93,9 +93,20 @@ INTRO
 		lda #<LoopsText
 		ldy #>LoopsText
 		jsr DrawText
+		jsr DrawConfig
 		jsr WaitForKeyRelease
 
 @		lda consol
+		cmp #%101		;KEY_SELECT
+		bne no_joy_sel
+		lda joy_cfg
+		eor #1
+		sta joy_cfg
+		jsr DrawConfig
+		jsr WaitForKeyRelease
+		jmp @-
+no_joy_sel
+
 		cmp #%110		;KEY_START
 		bne @-
 		
@@ -109,8 +120,8 @@ START
 		jsr InitBoardSize
 		jsr GenerateBoard
 		jsr WaitForKeyRelease
-		jsr ShuffleBoard
-
+;		jsr ShuffleBoard
+		jsr ShuffleTile
 		jsr InitCursors
 
 	;Initilaize clock
@@ -131,8 +142,26 @@ no_start
 		bne no_select
 		jsr NextBoardSize
 		jmp START
-
 no_select
+;		lda skstat
+;		and #4
+;		beq no_help
+;		lda kbcode
+;		cmp #$11		;KEY_HELP
+;		bne no_help
+		cmp #%011		;KEY_OPTION
+		bne no_option		
+		jsr HiliteLooseEnds
+
+;@		lda skstat
+;		and #4
+;		beq @-
+		jsr WaitForKeyRelease
+		jsr HiliteLooseEnds
+no_help
+no_option
+
+
 		lda clock
 		seq
 		jsr ClockWrite
@@ -155,9 +184,9 @@ no_select
 		jmp GAME_LOOP
 
 VictoryText
-		dta b(W_M, 10, 8)
-		dta b(W_RECTANGLE, 20, 6)
-		dta b(W_M, 4, 3)
+		dta b(W_M, 0, STATUS_LINE)
+;		dta b(W_RECTANGLE, 20, 6)
+;		dta b(W_M, 4, 3)
 		dta b(W_TEXT, 12, 'You have won')
 		dta b(W_END)
 
@@ -165,6 +194,7 @@ VICTORY
 		lda #<VictoryText
 		ldy #>VictoryText
 		jsr DrawText
+		jsr HideCursors
 
 wait_for_start
 		sta wsync
@@ -465,6 +495,42 @@ r_and dta b($ff,            $ff-f_left,  $ff)
 
 .ENDP
 
+ConfigText
+
+	dta b(W_M, 10, 16)
+	dta b(W_RECTANGLE, 22, 4)
+	dta b(W_M, 1, 1)
+	dta b(W_TEXT, 20, 'Joysticks:  Standard')
+	dta b(W_M, 12, 1)
+	dta b(W_TEXT, 8, 'Multijoy')
+	dta b(W_END)
+
+DrawConfig  .PROC
+		lda #<ConfigText
+		ldy #>ConfigText
+		jsr DrawText
+
+		ldx #1
+		jsr CursorHide
+
+		lda #17
+		clc
+		adc joy_cfg
+		sta cursor_y+1
+
+		lda #22
+		sta cursor_x+1
+		ldx #1
+		jsr CursorShow
+
+;		jsr ScreenAdr
+;		lda #'*'
+;		ldy #0
+;		sta (scr),y
+		
+
+		rts
+.ENDP
 
 ScrInit .PROC
 
@@ -473,8 +539,9 @@ ScrInit .PROC
 		mva #10  colbak
 		mva #>FONT CHBASE		
 		
-		lda #DL_CHR_HIRES
-		jmp InitDL
+;		lda #DL_CHR_HIRES
+;		jmp InitDL
+		rts
 		.ENDP
 
 		icl 'draw.asm'
@@ -563,8 +630,20 @@ RomSwitchVars .PROC
 		rts
 .ENDP
 
+
 cursor_color
 		dta b($1c, $b6, $47, $77)
+
+DLIST
+		dta b(DL_BLANK8,DL_BLANK8,DL_BLANK4)
+		dta b(DL_CHR_HIRES+DL_LMS)
+		dta a(SCREEN_BUF)
+		:23 dta b(DL_CHR_HIRES)
+		dta b(DL_BLANK1)
+		dta b(DL_CHR_HIRES+DL_LMS)		;status bar
+		dta a(STATUS_BAR)
+		dta b(DL_END)
+		dta a(DLIST)
 
 		.align 1024		
 FONT
@@ -599,11 +678,14 @@ PMG_BUF	.ds 2048
 
 DL_BUF   .ds 50
 
+EMPTY_TOP
 		.ds SCR_WIDTH
 SCREEN_BUF
 		.ds SCR_WIDTH * SCR_HEIGHT
 SCREEN_BUF_END
 		.ds SCR_WIDTH
+
+STATUS_BAR .ds SCR_WIDTH
 
 ;Backup of zero page variables.
 ;This will be initialized when switching the OS off.

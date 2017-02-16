@@ -34,48 +34,6 @@ DL_END     =  $41
 OVERLAY_X = (SCR_WIDTH-2)/2
 OVERLAY_Y = (SCR_HEIGHT-2)/2
  
-InitDL .PROC
-;In:
-;	a  graphics mode
-
-		sta b1
-		mwa #DL_BUF w1
-		ldy #0
-		
-		lda #DL_BLANK8
-		jsr PushByte
-		jsr PushByte
-		lda #DL_BLANK4
-		jsr PushByte		
-			
-		lda b1
-		ora #DL_LMS			;with address
-		jsr PushByte
-		lda #<SCREEN_BUF
-		ldx #>SCREEN_BUF
-		jsr Push2
-		ldx #24
-		lda b1
-@		jsr PushByte					
-    	dex
-    	bne @-
-		lda #DL_END
-		jsr PushByte
-		lda #<DL_BUF
-		ldx #>DL_BUF
-		jsr Push2	    	
-		rts
-
-Push2
-		jsr PushByte
-		txa
-PushByte
-		sta (w1),y
-		iny
-		rts				
-
-.ENDP
-
 ScreenAdr  .PROC
 ;a: x pos
 ;y: y pos
@@ -90,25 +48,25 @@ ScreenAdr  .PROC
 .ENDP
 
 ScrClear .PROC
+		mwa #EMPTY_TOP scr
 		ldx #0
 line	
-		txa
-		tay
-		lda #0
-		jsr ScreenAdr
-		lda #0
 		ldy #39
+		lda #0
 @		sta (scr),y
 		dey
 		bpl @-
+		adw scr #40
 		inx
-		cpx #SCR_HEIGHT
+		cpx #SCR_HEIGHT+3
 		bne line
 		rts
 .ENDP
 
+TBL_HEIGHT = SCR_HEIGHT+2
+
 ;Table of multiplication by 40 for screen
 scr_line_adr_l
-	:SCR_HEIGHT	dta l(#*SCR_WIDTH + SCREEN_BUF)
+	:TBL_HEIGHT	dta l(#*SCR_WIDTH + SCREEN_BUF)
 scr_line_adr_h
-	:SCR_HEIGHT	dta h(#*SCR_WIDTH + SCREEN_BUF)
+	:TBL_HEIGHT	dta h(#*SCR_WIDTH + SCREEN_BUF)

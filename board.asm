@@ -177,11 +177,7 @@ ShuffleTile .PROC
 		rts
 .ENDP
 
-RotateTile  .PROC
-;In:
-;	a   x
-;   y   y
-
+RotTileAdr .PROC
 		jsr TileAdr
 		lda scr
 		sec
@@ -190,7 +186,15 @@ RotateTile  .PROC
 		scs
 		dec scr+1
 
-		jsr LooseEnds
+		jmp LooseEnds
+.ENDP
+
+RotateTile  .PROC
+;In:
+;	a   x
+;   y   y
+
+		jsr RotTileAdr
 
 		stx b1			;loose = loose - x
 		lda loose
@@ -215,7 +219,7 @@ RotateTile  .PROC
 		inc loose+1
 
 		rts
-
+.ENDP
 ;
 ;              +-------+
 ;         0    |  1    |
@@ -228,7 +232,7 @@ RotateTile  .PROC
 ;              |       |
 ;              +-------+
 
-LooseEnds
+LooseEnds .PROC
 
 		ldy #BOARD_WIDTH+1
 		lda (scr),y
@@ -326,3 +330,28 @@ rot
 		dta b(%1110)  ;%1110
 		dta b(%1111)  ;%1111
 */		
+
+HiliteLooseEnds .PROC
+
+		mva board_max_y b2
+line
+		mva board_max_x aux
+@
+		lda aux
+		ldy b2
+		jsr RotTileAdr
+		cpx #0
+		beq no_loose
+		ldy #SCR_WIDTH+1
+		lda (scr),y
+		eor #128
+		sta (scr),y
+no_loose	
+		dec aux
+		bpl @-
+
+		dec b2
+		bpl line
+
+		rts
+.ENDP
