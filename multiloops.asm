@@ -10,7 +10,7 @@ SCR_HEIGHT  =  25
 STATUS_LINE = 24
 
 CURSOR_COUNT = 4
-CURSOR_HEIGHT = 8
+CURSOR_HEIGHT = 8+4
 
 BOARD_WIDTH = 40
 BOARD_HEIGHT = 25
@@ -26,13 +26,19 @@ aux3 = aux2+1
 var  = aux3+1
 
 scr = var + 8
-loose  = scr+2			;number of loose ends
+
+;Board state (position, size, number of loose ends)
+
+board_size = scr+2			;0-n
+loose  = board_size + 1		;number of loose ends
 board_w  = loose+2
 board_h  = board_w+1
 board_max_x = board_h+1
 board_max_y = board_max_x+1
+board_x = board_max_y+1
+board_y = board_x+1
 
-cursor_no = board_max_y+1
+cursor_no = board_y+1
 
 joy_cfg = cursor_no+1		;0 = normal joysticks, 1 = multijoy
 
@@ -72,15 +78,16 @@ f_left = 8
 		bpl @-
 
 		mva #1 joy_cfg
-
+		mva #0 board_size
+		
 INTRO
+		ldx #BOARD_SIZE_MAX
+		jsr InitBoardSize		;this actually sets the biggest board size (full screen)
+
 		jsr ScrInit
 		jsr InputInit
 		jsr PmgInit
-
-		lda #39
-		ldy #24
-		jsr SetBoardSize
+		
 		jsr ScrClear
 		jsr GenerateBoard
 		lda #<LoopsText
@@ -95,45 +102,18 @@ INTRO
 START
 		jsr ScrInit
 		jsr InputInit
-		jsr PmgInit
+		jsr PmgInit	
 
-		lda #39
-		ldy #24
-		jsr SetBoardSize
-	
 		jsr ScrClear
+		ldx board_size
+		jsr InitBoardSize
 		jsr GenerateBoard
-
 		jsr WaitForKeyRelease
-
 		jsr ShuffleBoard
 
-ResetCursors
+		jsr InitCursors
 
-		ldx #0
-		mva #0 cursor_x,x
-		mva #0 cursor_y,x				
-
-		inx
-		mva board_max_x cursor_x,x
-		mva board_max_y cursor_y,x
-
-		inx
-		mva #0 cursor_x,x
-		mva board_max_y cursor_y,x
-
-		inx
-		mva board_max_x cursor_x,x
-		mva #0 cursor_y,x				
-
-;---- show all cursors
-		ldx #0
-@
-		jsr CursorShow
-		inx
-		cpx #CURSOR_COUNT
-		bne @-
-
+	;Initilaize clock
 		jsr ClockReset
 		jsr ClockWrite
 
@@ -147,10 +127,10 @@ ret
 		bne no_start
 		jmp START
 no_start
-;		cmp #%101		;KEY_SELECT
-;		bne no_select
-;		jsr ShuffleTile
-;		jmp ret
+		cmp #%101		;KEY_SELECT
+		bne no_select
+		jsr NextBoardSize
+		jmp START
 
 no_select
 		lda clock
@@ -160,7 +140,7 @@ no_select
 		
 		ldx #0
 @		stx cursor_no
-		jsr CursorMove
+		jsr PlayerMove
 		ldx cursor_no
 		inx
 		cpx #CURSOR_COUNT
@@ -175,11 +155,11 @@ no_select
 		jmp GAME_LOOP
 
 VictoryText
-	dta b(W_M, 10, 8)
-	dta b(W_RECTANGLE, 20, 6)
-	dta b(W_M, 4, 3)
-	dta b(W_TEXT, 12, 'You have won')
-	dta b(W_END)
+		dta b(W_M, 10, 8)
+		dta b(W_RECTANGLE, 20, 6)
+		dta b(W_M, 4, 3)
+		dta b(W_TEXT, 12, 'You have won')
+		dta b(W_END)
 
 VICTORY
 		lda #<VictoryText
@@ -202,10 +182,6 @@ DrawText  .PROC
 		lda #0
 		sta cursor_x
 		sta cursor_y
-;		mwa #LoopsText w1
-;		mva #13 cursor_x
-;		mva #8 cursor_y
-;		mva #0 b1		;command
 		mva #0 b2		;repeat
 
 step
@@ -216,7 +192,7 @@ step
 		sbc #1
 		ldy cursor_y
 		dey
-		jsr TileAdr
+		jsr ScreenAdr
 
 		jsr read_byte
 		cmp #W_END
@@ -235,7 +211,7 @@ no_move
 		bne no_text
 		lda cursor_x
 		ldy cursor_y
-		jsr TileAdr
+		jsr ScreenAdr
 		jsr read_byte
 		sta b1
 @		jsr read_byte				
@@ -346,7 +322,7 @@ LoopsText
 	dta b(W_TEXT, 5, 'multi')	
 	dta b(W_END)
 
-CursorMove .PROC
+PlayerMove .PROC
 ;In:
 ;		x cursor number
 
@@ -416,63 +392,6 @@ no_move
 
 .ENDP
 
-CursorAdr .PROC
-		txa
-		clc
-		adc #>PMG_BUF+4		;Y position in sprite
-		sta scr+1
-		lda cursor_y,x
-		asl
-		asl
-		asl
-		clc
-		adc #48-20
-		sta scr		
-		rts
-.ENDP
-
-
-CursorHide  .PROC
-
-		jsr CursorAdr
-		lda #0
-		ldy #0
-@		sta (scr),y
-		iny
-		cpy #CURSOR_HEIGHT
-		bne @-		
-		rts
-.ENDP
-
-CursorShow  .PROC
-;In:
-;	x	cursor number
-
-		lda cursor_x,x		;x position = x*4 + left_margin
-		asl
-		asl
-		clc
-		adc #48
-		sta hposp0,x
-
-		jsr CursorAdr
-		lda #%11110000
-		ldy #0
-@		sta (scr),y
-		iny
-		cpy #CURSOR_HEIGHT
-		bne @-		
-
-;		lda cursor_y,x
-;		tay
-;		lda cursor_x,x
-;		jsr ScreenAdr
-;		ldy #0
-;		lda (scr),y
-;		eor #128
-;		sta (scr),y
-		rts
-.ENDP
 
 WriteLoose .PROC
 
@@ -508,7 +427,7 @@ Rectangle  .PROC
 line
 		lda b1
 		ldy b2
-		jsr TileAdr
+		jsr ScreenAdr
 
 		ldy #0
 		lda (scr),y
@@ -564,6 +483,7 @@ ScrInit .PROC
 		icl 'print.asm'
 		icl 'clock.asm'
 		icl 'board.asm'
+		icl 'cursors.asm'
 
 .PROC nmi
 		bit NMIST		; if this is VBI, jump to VBI code
@@ -644,7 +564,7 @@ RomSwitchVars .PROC
 .ENDP
 
 cursor_color
-		dta b($1c, $b6, $47, $75)
+		dta b($1c, $b6, $47, $77)
 
 		.align 1024		
 FONT

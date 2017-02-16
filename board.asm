@@ -1,19 +1,69 @@
-SetBoardSize .PROC
-		;board size
+;Board size is configures as a number between 0 to BOARD_MAX_SIZE.
 
+BOARD_SIZE_MAX = 3
+
+NextBoardSize .PROC
+;Purpose:
+;	Set next board size.
+;Input:
+;	board_zize
+;Output:
+;	board_h, board_w, board_max_y, board_max_x, board_x, board_y
+
+		ldx board_size
+		cpx #BOARD_SIZE_MAX
+		sne
+		ldx #-1
+		inx
+		stx board_size
+
+.def  :InitBoardSize 
+;Purpose:
+;	Set specified predefined board size.
+		ldy bh,x
 		sty board_h
 		dey
 		sty board_max_y
 
-		tay
+		ldy bw,x
 		sty board_w
 		dey
 		sty board_max_x
+
+		lda #SCR_WIDTH
+		sub board_w
+		lsr
+		sta board_x
+
+		lda #24		;maximum board height
+		sub board_h
+		lsr
+		sta board_y
+
 		rts
+
+bw   dta b(10,20,30,39)
+bh   dta b(6,12,18,24)
+.ENDP
+
+TileAdr  .PROC
+;a		x coordinate
+;y		y coordinate
+
+		clc
+		adc board_x
+		pha
+		tya
+		adc board_y
+		tay
+		pla
+		jmp ScreenAdr
 .ENDP
 
 GenerateBoard .PROC
-		mva #20 b2
+		;20 vs. 24
+		mva board_h b2
+
 @		jsr AddToBoard
 		dec b2
 		bne @-
@@ -25,9 +75,7 @@ GenerateBoard .PROC
 
 AddToBoard  .PROC
 
-		lda board_w
-;		adc board_w
-		sta b1
+		mva board_w b1
 gen_hor
 
 @		;y pos
@@ -43,7 +91,7 @@ gen_hor
 		cmp board_max_x
 		bcs @-
 
-		jsr ScreenAdr
+		jsr TileAdr
 
 		ldy #0
 		lda (scr),y
@@ -76,7 +124,7 @@ gen_vert
 		cmp board_w
 		bcs @-
 
-		jsr ScreenAdr
+		jsr TileAdr
 
 		ldy #0
 		lda (scr),y
@@ -99,13 +147,9 @@ gen_vert
 		rts
 		.ENDP
 
-TileAdr  .PROC
-		jmp ScreenAdr
-.ENDP
-
 ShuffleBoard .PROC
-		mva #4 aux
-a1		mva #255 b2
+		mva board_w aux				;4
+a1		mva board_h b2				;255
 @		jsr ShuffleTile
 		dec b2
 		bne @-
