@@ -63,7 +63,7 @@ line
 		rts
 .ENDP
 
-TBL_HEIGHT = SCR_HEIGHT+2
+TBL_HEIGHT = SCR_HEIGHT+3
 
 ;Table of multiplication by 40 for screen
 scr_line_adr_l

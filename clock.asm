@@ -38,7 +38,7 @@ ClockWrite .PROC
 ;Purpose:
 ;	Write clock to screen.
 
-		mwa #SCREEN_BUF+(STATUS_LINE*SCR_WIDTH)+20 scr
+		mwa #STATUS_BAR+20 scr
 
 		lda hours
 		jsr print_t

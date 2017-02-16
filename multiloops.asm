@@ -120,8 +120,8 @@ START
 		jsr InitBoardSize
 		jsr GenerateBoard
 		jsr WaitForKeyRelease
-;		jsr ShuffleBoard
-		jsr ShuffleTile
+		jsr ShuffleBoard
+;		jsr ShuffleTile
 		jsr InitCursors
 
 	;Initilaize clock
@@ -428,7 +428,7 @@ WriteLoose .PROC
 		mwa loose var
 		ldy #2
 		jsr BinToBCD
-		mwa #SCREEN_BUF+(STATUS_LINE*SCR_WIDTH) scr
+		mwa #STATUS_BAR scr
 		lda #4
 		ldx #' '
 		jsr PrintHex

@@ -62,7 +62,14 @@ TileAdr  .PROC
 
 GenerateBoard .PROC
 		;20 vs. 24
-		mva board_h b2
+		lda board_h
+		lsr
+		lsr
+		sta b2
+		lda board_h
+		sbc b2
+		sta b2
+
 
 @		jsr AddToBoard
 		dec b2
