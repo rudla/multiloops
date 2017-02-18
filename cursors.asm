@@ -1,6 +1,8 @@
 ;Visualize player cursors using PMG.
 ;Every cursor uses one playser graphics.
 
+CURSOR_TIMEOUT = 32		;measured in cca. 1/3 of a second
+
 InitCursors
 ;Cursors are positioned into corners
 
@@ -19,6 +21,7 @@ InitCursors
 ;---- show all cursors
 		ldx #0
 @
+		mva #CURSOR_TIMEOUT cursor_status,x
 		jsr CursorShow
 		inx
 		cpx #CURSOR_COUNT

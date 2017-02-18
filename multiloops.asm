@@ -368,16 +368,24 @@ PlayerMove .PROC
 		cmp #0
 		beq no_button
 
+		lda cursor_status,x
+		beq show_cursor
+
+		mva #CURSOR_TIMEOUT  cursor_status,x
+
 		lda cursor_y,x
 		tay
 		lda cursor_x,x
-		jsr RotateTile
-		rts 
+		jmp RotateTile
+		;---- 
 
 no_button
 		lda joy_state,x
 		cmp prev_joy_state,x
 		beq no_move
+
+		lda cursor_status,x	;if cursor is hidden, first show it (without any aother action)
+		beq done
 
 		jsr CursorHide
 
@@ -420,10 +428,21 @@ no_down
 
 done
 		mva joy_state,x prev_joy_state,x
+show_cursor
+		mva #CURSOR_TIMEOUT  cursor_status,x
 		jsr CursorShow
-no_move
 		rts		
 
+no_move
+		lda timer
+		and #%00001111
+		bne no_time
+		lda cursor_status,x
+		beq no_time
+		dec cursor_status,x
+		sne
+		jsr CursorHide
+no_time	rts
 .ENDP
 
 
@@ -698,6 +717,8 @@ zp_vars_backup  .ds 128
 
 cursor_x	.ds CURSOR_COUNT
 cursor_y	.ds CURSOR_COUNT
+cursor_status .ds CURSOR_COUNT		;when not zero, this value decrements every second
+
 joy_state	.ds CURSOR_COUNT
 prev_joy_state	.ds CURSOR_COUNT
 button_state	.ds CURSOR_COUNT
