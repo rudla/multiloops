@@ -2,6 +2,9 @@
 ;Every cursor uses one playser graphics.
 
 CURSOR_TIMEOUT = 32		;measured in cca. 1/3 of a second
+CURSOR_COUNT = 5
+CURSOR_HEIGHT = 8+4
+
 
 InitCursors
 ;Cursors are positioned into corners
@@ -17,6 +20,15 @@ InitCursors
 
 		mva board_max_x cursor_x+3
 		mva #0 cursor_y+3
+
+		;cursor no 4 is in the middle
+		lda board_w 
+		lsr
+		sta cursor_x+4
+
+		lda board_h
+		lsr
+		sta cursor_y+4
 
 ;---- show all cursors
 		ldx #0
@@ -38,10 +50,13 @@ HideCursors .PROC
 .ENDP
 
 CursorAdr .PROC
+		lda #>PMG_BUF+3
+		cpx #4
+		beq @+
 		txa
 		clc
 		adc #>PMG_BUF+4		;Y position in sprite
-		sta scr+1
+@		sta scr+1
 		lda cursor_y,x
 		add board_y
 		asl
@@ -75,15 +90,23 @@ CursorShow  .PROC
 		asl
 		asl
 		clc
-		adc #48-1
+		adc #47
+		cpx #4
+		bne mis
+		add #1
+mis
 		sta hposp0,x
 
 		jsr CursorAdr
-		lda #%11111100
+		
 		ldy #0
-@		sta (scr),y
+@		lda curs_data,x
+		eor (scr),y
+		sta (scr),y
 		iny
 		cpy #CURSOR_HEIGHT
 		bne @-		
 		rts
+
+curs_data	dta b(%11111100, %11111100,%11111100,%11111100,%00000011)
 .ENDP

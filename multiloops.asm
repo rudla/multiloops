@@ -2,6 +2,8 @@
 ;
 ; (c) 2017 Rudla Kudla
 
+DMA_MISSILES = 1
+DMA_PLAYERS = 2
 
 _SYS_PRINT_SIGNED = 0
 
@@ -9,9 +11,6 @@ SCR_WIDTH   =  40
 SCR_HEIGHT  =  25
 
 STATUS_LINE = 26
-
-CURSOR_COUNT = 4
-CURSOR_HEIGHT = 8+4
 
 BOARD_WIDTH = 40
 BOARD_HEIGHT = 25
@@ -69,7 +68,7 @@ f_left = 8
 		init_nmi $14, nmi , $c0 
 
 		mwa #DLIST DLPTR
-		mva #%00111110 DMACTL
+		mva #%00111110 DMACTL		;playfield_width_40+missile_dma+player_dma+pm_resolution_1+dl_dma
 
 		ldx #3
 @		lda cursor_color,x
@@ -77,10 +76,12 @@ f_left = 8
 		mva #0 sizep0,x
 		dex
 		bpl @-
+		mva #$0F colpf3
 
 		mva #1 joy_cfg
 		mva #0 board_size
-		
+
+		jmp START		
 INTRO
 		ldx #BOARD_SIZE_MAX
 		jsr InitBoardSize		;this actually sets the biggest board size (full screen)

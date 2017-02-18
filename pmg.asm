@@ -2,8 +2,9 @@
 PmgInit		.PROC
 
 		mva #>PMG_BUF PMBASE
-		mva #3 PMCNTL			;players + missiles
-		mva #%00110001 GTICTL
+		mva #%00000011 PMCNTL			;players + missiles
+		mva #%00110001 GTICTL			;multicolor_player + fifth_player
+		mva #%01010101 SIZEM			;quadruple size of missiles
 
         ;Erase PMG
 		mwa #PMG_BUF scr
