@@ -1,4 +1,4 @@
-# multiloops
+# Multiloops
 Simple cooperative game for Atari 8-bit computers
 
 ![alt tag](/pic/multiloops_title.png)
@@ -15,7 +15,7 @@ Do not let any ends loose.
 
 * START  - restart with new board
 * SELECT - restart with board of different size (cycle through 4 sizes)
-* OPTION - hilite tiles with some loose ends
+* OPTION - highlight tiles with some loose ends
 
 
 Inactive cursor are hidden after cca. 10 seconds.
