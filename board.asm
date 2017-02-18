@@ -192,8 +192,7 @@ RotTileAdr .PROC
 		sta scr
 		scs
 		dec scr+1
-
-		jmp LooseEnds
+		rts
 .ENDP
 
 RotateTile  .PROC
@@ -202,6 +201,7 @@ RotateTile  .PROC
 ;   y   y
 
 		jsr RotTileAdr
+		jsr LooseEnds
 
 		stx b1			;loose = loose - x
 		lda loose
@@ -347,6 +347,7 @@ line
 		lda aux
 		ldy b2
 		jsr RotTileAdr
+		jsr LooseEndsAtThisTile
 		cpx #0
 		beq no_loose
 		ldy #SCR_WIDTH+1
@@ -360,5 +361,51 @@ no_loose
 		dec b2
 		bpl line
 
+		rts
+.ENDP
+
+LooseEndsAtThisTile .PROC
+
+		ldy #BOARD_WIDTH+1
+		lda (scr),y
+		sta b1
+		ldx #0			;number of loose ends
+
+		;--- UP
+		lsr b1
+		bcc no_up
+		ldy #1
+		lda (scr),y
+		and #f_down
+		bne no_up
+		inx		
+no_up
+		;--- RIGHT
+		lsr b1
+		bcc no_right
+		ldy #BOARD_WIDTH+2
+		lda (scr),y		;down = 4
+		and #f_left
+		bne no_right
+		inx		
+no_right
+		;--- DOWN
+		lsr b1
+		bcc no_down
+		ldy #BOARD_WIDTH*2+1
+		lda (scr),y		;down = 4
+		and #f_up
+		bne no_down
+		inx		
+no_down
+		;--- LEFT
+		lsr b1
+		bcc no_left
+		ldy #BOARD_WIDTH
+		lda (scr),y		;down = 4
+		and #f_right
+		bne no_left
+		inx		
+no_left
 		rts
 .ENDP
