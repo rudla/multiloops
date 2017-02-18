@@ -351,6 +351,9 @@ LoopsText
 
 	dta b(W_M, -11, -2)
 	dta b(W_TEXT, 5, 'multi')	
+	dta b(W_M, 0, 8)
+	dta b(W_TEXT, 14, 'by Rudla Kudla')	
+	
 	dta b(W_END)
 
 PlayerMove .PROC
