@@ -99,17 +99,3 @@ normal_joy
 ;	ReadJoysticks = ReadNormalJoy
 
 ;	.ENDIF
-
-WaitForKey .PROC
-@		lda consol
-		cmp #%111
-		beq @-
-		rts
-.ENDP
-
-WaitForKeyRelease .PROC
-@	lda consol
-	cmp #%111
-	bne @-
-	rts
-.ENDP

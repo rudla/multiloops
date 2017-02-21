@@ -11,7 +11,8 @@ SCR_WIDTH   =  40
 SCR_HEIGHT  =  25
 
 STATUS_LINE = 26
-
+OWNERHIP_TOP_LINE = 27
+OWNERSHIP_BASE = 64
 BOARD_WIDTH = 40
 BOARD_HEIGHT = 25
 
@@ -81,7 +82,7 @@ f_left = 8
 		mva #1 joy_cfg
 		mva #0 board_size
 
-		jmp START		
+;		jmp START		
 INTRO
 		ldx #BOARD_SIZE_MAX
 		jsr InitBoardSize		;this actually sets the biggest board size (full screen)
@@ -96,10 +97,10 @@ INTRO
 		ldy #>LoopsText
 		jsr DrawText
 		jsr DrawConfig
-		jsr WaitForKeyRelease
+;		jsr WaitForKeyRelease
 
-@		lda consol
-		cmp #%101		;KEY_SELECT
+@		jsr WaitForKey
+		cmp #KEY_SELECT	;%101		;KEY_SELECT
 		bne no_joy_sel
 		lda joy_cfg
 		eor #1
@@ -109,7 +110,7 @@ INTRO
 		jmp @-
 no_joy_sel
 
-		cmp #%110		;KEY_START
+		cmp #KEY_START	;%110		;KEY_START
 		bne @-
 		
 START
@@ -135,29 +136,19 @@ GAME_LOOP
 @		cmp timer
 		beq @-
 ret
-		lda consol
-		cmp #%110		;KEY_START
+		jsr GetKeyPressed
+		cmp #KEY_START
 		bne no_start
 		jmp START
 no_start
-		cmp #%101		;KEY_SELECT
+		cmp #KEY_SELECT
 		bne no_select
 		jsr NextBoardSize
 		jmp START
 no_select
-;		lda skstat
-;		and #4
-;		beq no_help
-;		lda kbcode
-;		cmp #$11		;KEY_HELP
-;		bne no_help
-		cmp #%011		;KEY_OPTION
+		cmp #KEY_HELP
 		bne no_option		
 		jsr HiliteLooseEnds
-
-;@		lda skstat
-;		and #4
-;		beq @-
 		jsr WaitForKeyRelease
 		jsr HiliteLooseEnds
 no_help
@@ -203,9 +194,9 @@ wait_for_start
 		lda vcount
 		adc timer
 		sta colbak
-		lda consol
-		cmp #%110		;KEY_START
-		bne wait_for_start
+		jsr GetKeyPressed
+		;cmp #%110		;KEY_START
+		beq wait_for_start
 		jmp INTRO
 
 DrawText  .PROC
@@ -275,9 +266,7 @@ no_text
 cursor_show
 		ldx #0
 		jsr CursorShow
-		lda consol
-		and #%111
-		cmp #%111
+		jsr GetKeyPressed
 		bne @+
 		lda #2
 		jsr Pause
@@ -377,7 +366,20 @@ PlayerMove .PROC
 		lda cursor_y,x
 		tay
 		lda cursor_x,x
-		jmp RotateTile
+		jsr RotateTile
+;record owhership of the tile
+
+		ldx cursor_no
+		lda #OWNERHIP_TOP_LINE
+		add cursor_y,x
+		tay
+		lda cursor_x,x
+		jsr TileAdr
+		lda cursor_no
+		add #OWNERSHIP_BASE
+		ldy #0
+		sta (scr),y
+		rts
 		;---- 
 
 no_button
@@ -571,6 +573,7 @@ ScrInit .PROC
 		icl 'draw.asm'
 		icl 'pmg.asm'
 		icl 'input.asm'
+		icl 'keyboard.asm'
 		icl 'print.asm'
 		icl 'clock.asm'
 		icl 'board.asm'
@@ -711,6 +714,8 @@ SCREEN_BUF_END
 
 STATUS_BAR .ds SCR_WIDTH
 
+ownership	.ds SCR_WIDTH * SCR_HEIGHT		;1-8 is number of a player that owns this tile
+
 ;Backup of zero page variables.
 ;This will be initialized when switching the OS off.
 ;
@@ -728,5 +733,4 @@ prev_button_state	.ds CURSOR_COUNT
 
 board		.ds (BOARD_WIDTH+1)*(BOARD_HEIGHT+2)
 done_board	.ds (BOARD_WIDTH+1)*(BOARD_HEIGHT+2)
-ownership	.ds (BOARD_WIDTH+1)*(BOARD_HEIGHT+2)
 buf     .ds 128
