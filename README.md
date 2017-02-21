@@ -8,7 +8,7 @@ Press SELECT to switch between standard joysticks and multijoy interface.
 
 ![alt tag](/pic/multiloops_ingame.png)
 
-Use multijoy for up to 4 players.
+Use multijoy for up to 5 players.
 
 Move cursor with joystick. Click to rotate the tile under the cursor.
 Do not let any ends loose.
