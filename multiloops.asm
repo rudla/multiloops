@@ -16,6 +16,11 @@ OWNERSHIP_BASE = 64
 BOARD_WIDTH = 40
 BOARD_HEIGHT = 25
 
+PAPER_COLOR = 10
+CURSOR0_COLOR = $1c
+CURSOR4_COLOR = $0F
+STATUS_PAPER_COLOR = 8
+
 timer = $14
 
 b1 = 128
@@ -42,12 +47,12 @@ board_y = board_x+1
 cursor_no = board_y+1
 
 joy_cfg = cursor_no+1		;0 = normal joysticks, 1 = multijoy
-
+gfx_mode = joy_cfg+1
 ;clock
 
 TICKS_PER_SECOND = 50
 
-clock = joy_cfg + 1
+clock = gfx_mode + 1
 seconds = clock+1
 minutes = seconds+1
 hours = minutes+1
@@ -71,18 +76,12 @@ f_left = 8
 		mwa #DLIST DLPTR
 		mva #%00111110 DMACTL		;playfield_width_40+missile_dma+player_dma+pm_resolution_1+dl_dma
 
-		ldx #3
-@		lda cursor_color,x
-		sta colpm0,x
-		mva #0 sizep0,x
-		dex
-		bpl @-
-		mva #$0F colpf3
+		jsr SetColors
 
 		mva #1 joy_cfg
 		mva #0 board_size
 
-;		jmp START		
+		jmp START		
 INTRO
 		ldx #BOARD_SIZE_MAX
 		jsr InitBoardSize		;this actually sets the biggest board size (full screen)
@@ -147,13 +146,15 @@ no_start
 		jmp START
 no_select
 		cmp #KEY_HELP
-		bne no_option		
+		bne no_help
 		jsr HiliteLooseEnds
 		jsr WaitForKeyRelease
 		jsr HiliteLooseEnds
 no_help
+		cmp #KEY_OPTION
+		bne no_option
+		jsr ShowOwnership		
 no_option
-
 
 		lda clock
 		seq
@@ -175,6 +176,20 @@ no_option
 		beq VICTORY
 
 		jmp GAME_LOOP
+
+ShowOwnership .PROC
+		mwa #ownership DL_SCR_ADR
+		mva #%10110001 gfx_mode		;switch mode to 9 color display and modify some color registers to propertly show the color map
+		mva #PAPER_COLOR colpm0
+		mva #CURSOR0_COLOR colpf0
+		jsr HideCursors
+		jsr WaitForKeyRelease
+		lda #1
+		jsr Pause
+		mwa #SCREEN_BUF DL_SCR_ADR
+		jsr SetColors
+		jmp ShowCursors
+.ENDP
 
 VictoryText
 		dta b(W_M, 0, STATUS_LINE)
@@ -367,6 +382,7 @@ PlayerMove .PROC
 		tay
 		lda cursor_x,x
 		jsr RotateTile
+
 ;record owhership of the tile
 
 		ldx cursor_no
@@ -560,9 +576,6 @@ DrawConfig  .PROC
 
 ScrInit .PROC
 
-		mva #0 colpf1
-		mva #10  colpf2
-		mva #10  colbak
 		mva #>FONT CHBASE		
 		
 ;		lda #DL_CHR_HIRES
@@ -587,48 +600,20 @@ vbl
 		pha
 		txa
 		pha
-/*	
-		lda joy_pause
-		beq @+
-		dec joy_pause
-		bpl done
-@		
-		lda porta			;read joystick direction and button
-		and #%1111
-		eor #%1111
-		ldx trig0
-		ora trig_num,x
-		ora joy_state
-		sta joy_state
-		
-done
-
-		lda skstat
-		and #4
-		beq has_key
-
-		lda #KEY_NONE
-		sta prev_key_state
-		jmp key_done
-has_key
-		lda kbcode
-		cmp prev_key_state
-		beq key_done
-	    sta key_state
-		sta prev_key_state 
-key_done
-*/			    
+		mva #PAPER_COLOR colpf2
+		mva gfx_mode GTICTL
 		inc timer
 		jsr ClockTick
-	
 		pla
 		tax
 		pla
 		rti 
 
 dli
-;	pha
-;	pla
+		pha
+		mva #%00110001 GTICTL
+		mva #STATUS_PAPER_COLOR colpf2
+		pla
 		rti
 
 ;trig_num	.byte %00010000, %00000000
@@ -657,16 +642,35 @@ RomSwitchVars .PROC
 		rts
 .ENDP
 
+SetColors	.PROC
+
+		mva #%00110001 gfx_mode
+		sta GTICTL
+
+		mva #0 colpf1
+		mva #PAPER_COLOR  colpf2
+		mva #PAPER_COLOR  colbak
+
+		ldx #3
+@		lda cursor_color,x
+		sta colpm0,x
+		mva #0 sizep0,x
+		dex
+		bpl @-
+		mva cursor_color+4 colpf3
+		rts
+		.ENDP
 
 cursor_color
-		dta b($1c, $b6, $47, $77)
+		dta b(CURSOR0_COLOR, $b6, $47, $77, CURSOR4_COLOR)
 
 DLIST
 		dta b(DL_BLANK8,DL_BLANK8,DL_BLANK4)
 		dta b(DL_CHR_HIRES+DL_LMS)
+DL_SCR_ADR
 		dta a(SCREEN_BUF)
 		:23 dta b(DL_CHR_HIRES)
-		dta b(DL_BLANK1)
+		dta b(DL_BLANK1+DL_DLI)
 		dta b(DL_CHR_HIRES+DL_LMS)		;status bar
 		dta a(STATUS_BAR)
 		dta b(DL_END)
@@ -696,14 +700,19 @@ FONT
 		ins 'gfx/td.bin'		;14  1 1 1 0  right+down+left
 		ins 'gfx/g.bin'			;15  1 1 1 1  all
 
+		org FONT+OWNERSHIP_BASE*8
+
+		:8 dta b(%01000100)			;cursor 0
+		:8 dta b(%00010001)			;cursor 1
+		:8 dta b(%00100010)			;cursor 2
+		:8 dta b(%00110011)			;cursor 3
+		:8 dta b(%01110111)			;cursor 4	colpf3
+
 		org FONT+1024
 
 		.align 4096
 
 PMG_BUF	.ds 2048
-
-
-DL_BUF   .ds 50
 
 EMPTY_TOP
 		.ds SCR_WIDTH

@@ -58,7 +58,7 @@ line
 		bpl @-
 		adw scr #40
 		inx
-		cpx #SCR_HEIGHT+3
+		cpx #SCR_HEIGHT+3+SCR_HEIGHT
 		bne line
 		rts
 .ENDP

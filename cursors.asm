@@ -6,7 +6,7 @@ CURSOR_COUNT = 5
 CURSOR_HEIGHT = 8+4
 
 
-InitCursors
+InitCursors .PROC
 ;Cursors are positioned into corners
 
 		mva #0 cursor_x
@@ -40,6 +40,18 @@ InitCursors
 		bne @-
 
 		rts
+		.ENDP
+
+ShowCursors .PROC
+		ldx #CURSOR_COUNT-1
+@
+		lda cursor_status,x
+		beq skip
+		jsr CursorShow
+skip	dex
+		bpl @-
+		rts
+		.ENDP
 
 HideCursors .PROC
 		ldx #CURSOR_COUNT-1
