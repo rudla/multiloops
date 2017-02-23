@@ -25,7 +25,8 @@ timer = $14
 
 b1 = 128
 b2 = b1+1
-w1 = b2+1
+b3 = b2+1
+w1 = b3+1
 aux = w1+2
 aux2 = aux+1
 aux3 = aux2+1
@@ -374,7 +375,7 @@ PlayerMove .PROC
 		beq no_button
 
 		lda cursor_status,x
-		beq show_cursor
+		jeq show_cursor
 
 		mva #CURSOR_TIMEOUT  cursor_status,x
 
@@ -391,9 +392,24 @@ PlayerMove .PROC
 		tay
 		lda cursor_x,x
 		jsr TileAdr
-		lda cursor_no
-		add #OWNERSHIP_BASE
 		ldy #0
+
+		;If this is first rotation of this tile, remeber original owner and tile
+		lda cursor_orig_tile,x
+		bpl no_first_rot
+		mva b2 cursor_orig_tile,x
+		mva (scr),y cursor_orig_owner,x
+
+no_first_rot
+		lda b3
+		cmp cursor_orig_tile,x
+		bne not_same
+		lda cursor_orig_owner,x
+		jmp set_ownership
+not_same
+		lda cursor_no
+		add #OWNERSHIP_BASE		
+set_ownership
 		sta (scr),y
 		rts
 		;---- 
@@ -402,6 +418,7 @@ no_button
 		lda joy_state,x
 		cmp prev_joy_state,x
 		beq no_move
+		sta prev_joy_state,x
 
 		lda cursor_status,x	;if cursor is hidden, first show it (without any aother action)
 		beq done
@@ -444,9 +461,9 @@ no_up
 		bpl done
 no_down
 
-
 done
-		mva joy_state,x prev_joy_state,x
+		mva #-1 cursor_orig_tile,x
+		;mva joy_state,x prev_joy_state,x
 show_cursor
 		mva #CURSOR_TIMEOUT  cursor_status,x
 		jsr CursorShow
@@ -733,6 +750,8 @@ zp_vars_backup  .ds 128
 cursor_x	.ds CURSOR_COUNT
 cursor_y	.ds CURSOR_COUNT
 cursor_status .ds CURSOR_COUNT		;when not zero, this value decrements every second
+cursor_orig_tile .ds CURSOR_COUNT
+cursor_orig_owner .ds CURSOR_COUNT  ; 0 means uninitialized
 
 joy_state	.ds CURSOR_COUNT
 prev_joy_state	.ds CURSOR_COUNT

@@ -199,7 +199,9 @@ RotateTile  .PROC
 ;In:
 ;	a   x
 ;   y   y
-
+;Out:
+;	b2	Original tile before rotation
+;	b3  tile after rotation
 		jsr RotTileAdr
 		jsr LooseEnds
 
@@ -214,8 +216,10 @@ RotateTile  .PROC
 		ldy #BOARD_WIDTH+1
 		lda (scr),y
 		tax
+		sta b2
 		lda rot,x
-		sta (scr),y		
+		sta (scr),y
+		sta b3
 		jsr LooseEnds
 
 		txa			;loose =loose + x
