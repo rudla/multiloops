@@ -77,13 +77,12 @@ f_left = 8
 		mwa #DLIST DLPTR
 		mva #%00111110 DMACTL		;playfield_width_40+missile_dma+player_dma+pm_resolution_1+dl_dma
 
-		jsr SetColors
-
 		mva #1 joy_cfg
 		mva #0 board_size
 
-		jmp START		
+;		jmp START		
 INTRO
+		jsr SetColors
 		ldx #BOARD_SIZE_MAX
 		jsr InitBoardSize		;this actually sets the biggest board size (full screen)
 
@@ -97,7 +96,6 @@ INTRO
 		ldy #>LoopsText
 		jsr DrawText
 		jsr DrawConfig
-;		jsr WaitForKeyRelease
 
 @		jsr WaitForKey
 		cmp #KEY_SELECT	;%101		;KEY_SELECT
@@ -154,7 +152,9 @@ no_select
 no_help
 		cmp #KEY_OPTION
 		bne no_option
-		jsr ShowOwnership		
+		jsr ShowOwnership
+		jsr ShowCursors
+
 no_option
 
 		lda clock
@@ -188,8 +188,7 @@ ShowOwnership .PROC
 		lda #1
 		jsr Pause
 		mwa #SCREEN_BUF DL_SCR_ADR
-		jsr SetColors
-		jmp ShowCursors
+		jmp SetColors
 .ENDP
 
 VictoryText
@@ -211,8 +210,13 @@ wait_for_start
 		adc timer
 		sta colbak
 		jsr GetKeyPressed
-		;cmp #%110		;KEY_START
 		beq wait_for_start
+		cmp #KEY_OPTION
+		bne no_option2
+		jsr ShowOwnership
+		jmp wait_for_start
+no_option2
+
 		jmp INTRO
 
 DrawText  .PROC

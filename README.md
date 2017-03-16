@@ -15,7 +15,7 @@ Do not let any ends loose.
 
 * START  - restart with new board
 * SELECT - restart with board of different size (cycle through 4 sizes)
-* OPTION - highlight tiles with some loose ends
+* HELP - highlight tiles with some loose ends
+* OPTION - show ownership map of tiles
 
-
-Inactive cursor are hidden after cca. 10 seconds.
+Inactive cursors are hidden after cca. 10 seconds. They appear again when the joystick is used.
