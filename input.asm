@@ -40,18 +40,13 @@ ReadNormalJoy .PROC
 .ENDP
 
 InitMultiJoy .PROC
-		lda joy_cfg
+		mva #$30 $D302   ; clear BIT 2 of PACTL (direction control register) control read/write direction with PORTA				
+		ldx joy_cfg
 		beq normal_joy
-		LDA #$30	   ; clear BIT 2 of PACTL (direction control register)
-		STA $D302      ;PACTL, control read/write direction with PORTA		
-		LDA #$00	   ; 4 upper bits=OUT (Joystick 1),4 lower bits=IN (Joystick 0)
-		ldx joy_state
-		beq normal_joy
-		LDA #$F0
-joy_state		
-		STA $D300      ;PORTA, set directions
-		mva #$34  $D302 ; restore OS default value for PACTL 
+		LDx #$F0		 ;multijoy: 4 upper bits=OUT (Joystick 1),4 lower bits=IN (Joystick 0)
 normal_joy
+		stx $D300      ;PORTA, set directions
+		mva #$34  $D302 ; restore OS default value for PACTL 
 		rts
 .ENDP
 

@@ -58,6 +58,10 @@ seconds = clock+1
 minutes = seconds+1
 hours = minutes+1
 
+music_on = hours + 1
+
+rmt_vars = 255-20		;hours+1
+;:20 .byte		;There must be 20 bytes of zero page variables for RMT 
 
 ;Direction flags
 f_up = 1
@@ -70,6 +74,14 @@ f_left = 8
 		icl 'macros/init_nmi.mac'		
 
 		org $2000
+
+		mva #0 music_on
+
+		ldx #<MODUL					;low byte of RMT module to X reg
+		ldy #>MODUL					;hi byte of RMT module to Y reg
+		jsr RASTERMUSICTRACKER		;Init	
+
+;		inc music_on
 		
 		mva #0 DMACTL
 		init_nmi $14, nmi , $c0 
@@ -82,6 +94,12 @@ f_left = 8
 
 ;		jmp START		
 INTRO
+		mva #0 music_on
+		ldx #<MODUL					;low byte of RMT module to X reg
+		ldy #>MODUL					;hi byte of RMT module to Y reg
+		jsr RASTERMUSICTRACKER		;Init	
+		inc music_on
+
 		jsr SetColors
 		ldx #BOARD_SIZE_MAX
 		jsr InitBoardSize		;this actually sets the biggest board size (full screen)
@@ -154,8 +172,20 @@ no_help
 		bne no_option
 		jsr ShowOwnership
 		jsr ShowCursors
+		jmp no_music_key
 
 no_option
+		cmp #'M'
+		bne no_music_key
+
+		jsr WaitForKeyRelease
+		lda #1
+		eor music_on
+		sta music_on
+   		jsr RASTERMUSICTRACKER+9	;turn off all sounds
+
+no_music_key
+
 
 		lda clock
 		seq
@@ -350,7 +380,7 @@ W_RECTANGLE = 7
 
 LoopsText
 	dta b(W_M, 3, 3)
-	dta b(W_RECTANGLE, 20, 10)
+	dta b(W_RECTANGLE, 20, 11)
 	dta b(W_M, 4, 2)
 	dta b(D,D,D,D,D,R,R,R,R)
 	dta b(W_M, -1, -3)
@@ -361,8 +391,10 @@ LoopsText
 
 	dta b(W_M, -11, -2)
 	dta b(W_TEXT, 5, 'multi')	
-	dta b(W_M, 0, 8)
-	dta b(W_TEXT, 14, 'by Rudla Kudla')	
+	dta b(W_M, -3, 8)
+	dta b(W_TEXT, 16, 'code Rudla Kudla')
+	dta b(W_M, 0, 1)
+	dta b(W_TEXT, 11, 'music R0ger')
 	
 	dta b(W_END)
 
@@ -621,10 +653,19 @@ vbl
 		pha
 		txa
 		pha
+		tya
+		pha
+
 		mva #PAPER_COLOR colpf2
 		mva gfx_mode GTICTL
 		inc timer
 		jsr ClockTick
+		lda music_on
+		beq no_music
+   		jsr RASTERMUSICTRACKER+3
+no_music
+		pla
+		tay
 		pla
 		tax
 		pla
@@ -730,6 +771,15 @@ FONT
 		:8 dta b(%01110111)			;cursor 4	colpf3
 
 		org FONT+1024
+
+MODUL
+		ins 'multiloops_stripped.rmt'
+
+
+FEAT_RELOC  = 1		
+STEREOMODE = 1
+		icl 'rmt.asm'
+		
 
 		.align 4096
 
